@@ -24,9 +24,9 @@ mongoose.connect('mongodb://localhost/puush');
 // Configuration
 var proxyPort = 9123;
 var maxFileSize = 5 * 1024 * 1024; // 5 MB
-var uploadedUrl = 'http://91.215.156.65:' + proxyPort + '/';
+var uploadedUrl = 'http://localhost:' + proxyPort + '/';
 var uploadPath = 'upload/';
-var passwordSalt = '5182t97PSZF102z';
+var passwordSalt = '';
 //
 
 var Schema = mongoose.Schema;
