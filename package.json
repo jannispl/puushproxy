@@ -1,0 +1,17 @@
+{
+  "name": "puushproxy",
+  "version": "0.1",
+  "description": "A proxy for puush",
+  "author": "mavedev <me@mavedev.com>",
+  "dependencies": {
+    "formidable": "1.x.x",
+    "mongoose": "2.4.x",
+    "mime": "1.2.x",
+  ",
+  "engine": "node >= 0.4.12",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mave/puushproxy"
+  },
+  "main": "./app.js"
+}

@@ -1,0 +1,381 @@
+/*
+ *
+ *  puush proxy
+ *  2011 mave
+ *
+ *  This is a mess, but it fits in 1 file.
+ *
+ */
+
+var sys = require("sys");
+var http = require('http');
+var url = require('url');
+var querystring = require('querystring');
+var formidable = require('formidable');
+var fs = require('fs');
+var util = require('util');
+var mongoose = require('mongoose');
+var crypto = require('crypto');
+var path = require('path');
+var mime = require('mime');
+
+mongoose.connect('mongodb://localhost/puush');
+
+// Configuration
+var proxyPort = 9123;
+var maxFileSize = 5 * 1024 * 1024; // 5 MB
+var uploadedUrl = 'http://91.215.156.65:' + proxyPort + '/';
+var uploadPath = 'upload/';
+var passwordSalt = '5182t97PSZF102z';
+//
+
+var Schema = mongoose.Schema;
+var UserSchema = new Schema(
+{
+	email:			{ type: String },
+	password:		{ type: String },
+	ts:				{ type: Date, default: Date.now },
+	apiKey:			{ type: String },
+	quotaUsed:		{ type: Number, default: 0 }
+});
+var UserModel = mongoose.model('User', UserSchema);
+
+var FileSchema = new Schema(
+{
+	owner:			{ type: Schema.ObjectId },
+	shortname:		{ type: String },
+	name:			{ type: String },
+	ts:				{ type: Date, default: Date.now }
+});
+var FileModel = mongoose.model('File', FileSchema);
+
+function hashPassword(password)
+{
+	var shasum = crypto.createHash('sha1');
+	shasum.update(passwordSalt + String(password));
+	return shasum.digest('hex');
+}
+
+function generateApiKey()
+{
+	var rand = String(Math.random());
+	var magic = (new Date().getTime()).toString() + rand.substr(rand.indexOf('.') + 1);
+	
+	var shasum = crypto.createHash('sha1');
+	shasum.update(magic);
+	return shasum.digest('hex').toUpperCase();
+}
+
+function generateShortName()
+{
+	return generateApiKey().substr(0, 7).toLowerCase();
+}
+
+function safeFilename(filename)
+{
+	return filename.replace(/\//g, '_').replace(/\\/g, '_');
+}
+
+function customPuush(req, res)
+{
+	var form = new formidable.IncomingForm();
+	form.maxFieldsSize = maxFileSize; // 5mb
+	
+	form.parse(req, function (err, fields, files)
+	{
+		var apiKey = fields['k'];
+		var unk = fields['c'];
+		
+		UserModel.findOne({ apiKey: apiKey }, function (err, doc)
+		{
+			if (doc == null)
+			{
+				res.end('-1');
+				return;
+			}
+			
+			var success = 0;
+			for (var i in files)
+			{
+				var f = files[i];
+				
+				if (f.size > maxFileSize) // second 5mb check
+				{
+					console.log('exceed 5mb');
+					continue;
+				}
+				++success;
+				
+				var fn = function (f, name, callback)
+				{
+					path.exists(uploadPath + name, function (exists)
+					{
+						if (!exists)
+						{
+							callback(f, name);
+						}
+						else
+						{
+							var from = 1000; var to = 9999;
+							var rand = Math.floor(Math.random() * (to - from + 1) + from);
+							var idx = name.lastIndexOf('.');
+							name = idx != -1 ? (name.substr(0, idx) + '_' + rand + name.substr(idx)) : (name + '_' + rand);
+							fn(f, name, callback);
+						}
+					});
+				};
+				var fn2 = function (f, short, callback)
+				{
+					FileModel.findOne({ shortname: short }, function (err, doc)
+					{
+						if (doc == null)
+						{
+							callback(f, short);
+						}
+						else
+						{
+							name = generateShortName();
+							fn2(f, name, callback);
+						}
+					});
+				};
+				var final = function (user, fx, name, shortname)
+				{					
+					// move file
+					var is = fs.createReadStream(fx.path);
+					var os = fs.createWriteStream(uploadPath + name);
+
+					util.pump(is, os, (function (file, s)
+					{
+						fs.unlinkSync(file.path);
+						
+						var doc = new FileModel();
+						doc.owner = user;
+						doc.shortname = shortname;
+						doc.name = name;
+						doc.save();
+						
+						user.quotaUsed += file.size;
+						user.save();
+						
+						res.end('0,' + uploadedUrl + s + ',133337,12345');
+					}).bind(this, fx, shortname));
+				}
+				
+				// This attempts to generate a unique filename and short name for this file.
+				// Asynchronous. Very messy.
+				var a = {};
+				fn(f, safeFilename(f.name), (function (u, a_, f_, name)
+				{
+					// got name
+					a_.name = name;
+					if (a_.name && a_.short && !(a_.done))
+					{
+						final(u, f_, a_.name, a_.short);
+						a_.done = true;
+					}
+				}).bind(this, doc, a));
+				fn2(f, generateShortName(), (function (u, a_, f_, short)
+				{
+					// got short name
+					a_.short = short;
+					if (a_.name && a_.short && !(a_.done))
+					{
+						final(u, f_, a_.name, a_.short);
+						a_.done = true;
+					}
+				}).bind(this, doc, a));
+			}
+			
+			if (success == 0)
+			{
+				res.end('-1');
+			}
+		});
+	});
+}
+
+function handleRegister(req, res)
+{
+	res.writeHead(200, { 'Content-Type': 'text/html' });
+	
+	if (req.method == 'POST')
+	{
+		var buf = '';
+		req.on('data', function (chunk)
+		{
+			buf += chunk;
+		});
+		req.on('end', function ()
+		{
+			var query = querystring.parse(buf);
+			
+			var email = query['email'];
+			var password = query['password'];
+			if (!email || !password || email.length < 5 || password.length < 5)
+			{
+				res.write('Error: Your email/password can\'t be shorter than 5 characters');
+				res.end('<br /><br /><a href="/register" onclick="history.back(); return false;">Back</a>');
+				return;
+			}
+			if (email.indexOf('@') == -1 || email.indexOf('.') == -1)
+			{
+				res.write('Error: invalid email address');
+				res.end('<br /><br /><a href="/register" onclick="history.back(); return false;">Back</a>');
+				return;
+			}
+			
+			var fn = function (apikey, callback)
+			{
+				UserModel.findOne({ apiKey: apikey }, function (err, doc)
+				{
+					if (doc == null)
+					{
+						callback(apikey);
+					}
+					else
+					{
+						apikey = generateApiKey();
+						fn(apikey, callback);
+					}
+				});
+			};
+			fn(generateApiKey(), function (apikey)
+			{
+				var doc = new UserModel();
+				doc.email = email;
+				doc.password = hashPassword(password);
+				doc.apiKey = apikey;
+				doc.save();
+				
+				res.write('You have been registered successfully');
+				res.end();
+			});
+		});
+		return;
+	}
+	
+	res.write(
+		  '<h1>Register</h1>'
+		+ '<form action="" method="post" />'
+		+ 'Email: <input type="text" name="email" /><br />'
+		+ 'Password: <input type="password" name="password" /><br />'
+		+ '<br /><input type="submit" value="Register" />'
+		+ '</form>'
+	);
+	res.end();
+}
+
+http.createServer(function (request, response)
+{
+	var method = request.method;
+	var uri = url.parse(request.url);
+	var path = uri.pathname;
+	
+	var pathparts = (path[0] == '/' ? path.substr(1) : path).split('/');
+	
+	if (pathparts.length == 1)
+	{
+		if (pathparts[0] == 'register')
+		{
+			handleRegister(request, response);
+		}
+		else if (pathparts[0].length == 7)
+		{
+			var short = pathparts[0];
+			
+			FileModel.findOne({ shortname: short }, function (err, doc)
+			{
+				if (doc == null)
+				{
+					response.writeHead(404, { 'Content-Type': 'text/html' });
+					response.end('<h1>404 Not Found</h1>');
+				}
+				else
+				{
+					fs.readFile(uploadPath + doc.name, 'binary', function (err, file)
+					{
+						if (err)
+						{        
+							response.writeHead(500, { 'Content-Type': 'text/html' });
+							response.end('<h1>500 Internal Server Error</h1>');
+							return;
+						}
+						
+						response.writeHead(200, { 'Content-Type': mime.lookup(doc.name) });
+						response.write(file, 'binary');
+						response.end();
+					});
+				}
+			});
+		}
+		
+		return;
+	}
+	
+	response.writeHead(200, { 'Content-Type': 'text/plain' });
+	
+	if (path == '/dl/puush-win.txt')
+	{
+		response.end('81');
+		return;
+	}
+	
+	if (pathparts.length < 2 || pathparts[0] != 'api')
+	{
+		response.end('This is for API calls only');
+		return;
+	}
+	
+	var apiact = pathparts[1];
+	
+	if (apiact == 'auth')
+	{
+		var buf = '';
+		request.on('data', function (chunk)
+		{
+			buf += chunk.toString();
+		});
+		request.on('end', function ()
+		{	
+			var query = querystring.parse(buf);
+			var email = query['e'];
+			var password = query['p'];
+			var apikey = query['k'];
+			var unknown = query['z'];
+			
+			if (!email || (!password && !apikey))
+			{
+				response.end('-1');
+				return;
+			}
+			
+			var cond = { email: String(email) };
+			if (password) cond['password'] = hashPassword(password);
+			else cond['apiKey'] = apikey;
+			
+			UserModel.findOne(cond, function (err, doc)
+			{
+				if (doc == null)
+				{
+					response.end('-1');
+					return;
+				}
+				
+				// ispremium,apikey,[expireday],quotaused
+				response.end('1,' + doc.apiKey + ',,' + doc.quotaUsed);
+			});
+		});
+		return;
+	}
+	else if (apiact == 'up')
+	{
+		customPuush(request, response);
+		return;
+	}
+	else if (apiact == 'hist')
+	{
+		response.end('0\n');
+		return;
+	}
+}).listen(proxyPort);
