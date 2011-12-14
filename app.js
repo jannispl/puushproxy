@@ -27,6 +27,7 @@ var maxFileSize = 5 * 1024 * 1024; // 5 MB
 var uploadedUrl = 'http://localhost:' + proxyPort + '/';
 var uploadPath = 'upload/';
 var passwordSalt = '';
+var registerEnabled = false;
 //
 
 var Schema = mongoose.Schema;
@@ -198,6 +199,12 @@ function customPuush(req, res)
 function handleRegister(req, res)
 {
 	res.writeHead(200, { 'Content-Type': 'text/html' });
+
+	if (!registerEnabled)
+	{
+		res.end('Registration is disabled for this service');
+		return;
+	}
 	
 	if (req.method == 'POST')
 	{
@@ -279,6 +286,7 @@ http.createServer(function (request, response)
 		if (pathparts[0] == 'register')
 		{
 			handleRegister(request, response);
+			return;
 		}
 		else if (pathparts[0].length == 7)
 		{
@@ -308,9 +316,8 @@ http.createServer(function (request, response)
 					});
 				}
 			});
+			return;
 		}
-		
-		return;
 	}
 	
 	response.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -323,7 +330,7 @@ http.createServer(function (request, response)
 	
 	if (pathparts.length < 2 || pathparts[0] != 'api')
 	{
-		response.end('This is for API calls only');
+		response.end('This is a puush proxy service.');
 		return;
 	}
 	
