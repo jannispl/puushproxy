@@ -1,3 +1,24 @@
-puush prox
+puush proxy
 
 A proxy for puush
+
+
+Requirements
+---
+ * Node.js v0.4.12 or higher (+ npm) --- http://www.nodejs.org
+ * MongoDB --- http://www.mongodb.org
+ * formidable --- npm install formidable
+ * mime --- npm install mime
+ * mongoose --- npm install mongoose
+
+Configuration
+---
+ Check the 'configuration' section of app.js.
+ Set 'registerEnabled' to true when you're going to register an account via http://host:port/register
+ Don't forget to create your upload directory and make writable.
+ You might want to use 'forever' (npm install forever -g) to keep the proxy alive as long as possible.
+
+in puush:
+ Edit %appdata%\puush\puush.ini:
+   ProxyServer = ip
+   ProxyPort = port
