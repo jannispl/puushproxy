@@ -28,7 +28,6 @@ var uploadedUrl = 'http://localhost:' + proxyPort + '/';
 var uploadPath = 'upload/';
 var passwordSalt = '';
 var registerEnabled = false;
-//
 
 var Schema = mongoose.Schema;
 var UserSchema = new Schema(
