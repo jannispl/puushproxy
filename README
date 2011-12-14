@@ -1,7 +1,8 @@
 puush proxy
-
 A proxy for puush
 
+This proxy allows you to upload screenshots captured with puush to your own server.
+Check http://puush.me for more information on puush.
 
 Requirements
 ---
@@ -22,3 +23,9 @@ in puush:
  Edit %appdata%\puush\puush.ini:
    ProxyServer = ip
    ProxyPort = port
+
+
+Note
+---
+ This software intercepts all requests to the original puush API and does *not* forward them.
+ You have to create an account using the registration interface (http://host:port/register).
