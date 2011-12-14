@@ -7,7 +7,6 @@
  *
  */
 
-var sys = require("sys");
 var http = require('http');
 var url = require('url');
 var querystring = require('querystring');
@@ -80,7 +79,12 @@ function customPuush(req, res)
 {
 	var form = new formidable.IncomingForm();
 	form.maxFieldsSize = maxFileSize; // 5mb
-	
+
+	form.on('error', function (err)
+	{
+		res.end('-1');
+	});
+
 	form.parse(req, function (err, fields, files)
 	{
 		var apiKey = fields['k'];
