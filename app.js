@@ -67,7 +67,11 @@ function generateApiKey()
 
 function generateShortName()
 {
-	return generateApiKey().substr(0, 7).toLowerCase();
+	var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
+	return chars[Math.random() * 62 >> 0]
+		+ chars[Math.random() * 62 >> 0]
+		+ chars[Math.random() * 62 >> 0]
+		+ chars[Math.random() * 62 >> 0];
 }
 
 function safeFilename(filename)
@@ -291,7 +295,7 @@ http.createServer(function (request, response)
 			handleRegister(request, response);
 			return;
 		}
-		else if (pathparts[0].length == 7)
+		else if (pathparts[0].length == 4)
 		{
 			var short = pathparts[0];
 			
@@ -313,7 +317,16 @@ http.createServer(function (request, response)
 							return;
 						}
 						
-						response.writeHead(200, { 'Content-Type': mime.lookup(doc.name) });
+						var mimetype = mime.lookup(doc.name);
+						var headers = { 'Content-Type': mimetype };
+
+						var needle = "application/";
+						if (mimetype.length >= needle.length && mimetype.substr(0, needle.length) == needle)
+						{
+							headers['Content-Disposition'] = 'attachment; filename=' + doc.name
+						}
+
+						response.writeHead(200, headers);
 						response.write(file, 'binary');
 						response.end();
 					});
