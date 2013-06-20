@@ -1,6 +1,6 @@
 {
   "name": "puushproxy",
-  "version": "0.1",
+  "version": "0.0.1",
   "description": "A proxy for puush",
   "author": "mavedev <me@mavedev.com>",
   "dependencies": {
