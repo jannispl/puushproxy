@@ -6,8 +6,8 @@
   "dependencies": {
     "formidable": "1.x.x",
     "mongoose": "2.4.x",
-    "mime": "1.2.x",
-  ",
+    "mime": "1.2.x"
+  },
   "engine": "node >= 0.4.12",
   "repository": {
     "type": "git",
