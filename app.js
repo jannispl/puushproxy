@@ -152,6 +152,7 @@ function customPuush(req, res)
 					// move file
 					var is = fs.createReadStream(fx.path);
 					var os = fs.createWriteStream(uploadPath + name);
+					var ext = "." + name.split(".")[name.split(".").length-1];
 
 					util.pump(is, os, (function (file, s)
 					{
@@ -166,7 +167,7 @@ function customPuush(req, res)
 						user.quotaUsed += file.size;
 						user.save();
 						
-						res.end('0,' + uploadedUrl + s + ',133337,12345');
+						res.end('0,' + uploadedUrl + s + ext + ',133337,12345');
 					}).bind(this, fx, shortname));
 				}
 				
@@ -295,9 +296,9 @@ http.createServer(function (request, response)
 			handleRegister(request, response);
 			return;
 		}
-		else if (pathparts[0].length == 4)
+		else if (pathparts[0].split(".")[0].length == 4)
 		{
-			var short = pathparts[0];
+			var short = pathparts[0].split(".")[0];
 			
 			FileModel.findOne({ shortname: short }, function (err, doc)
 			{
