@@ -317,7 +317,7 @@ http.createServer(function (request, response)
 					fs.readFile(uploadPath + doc.name, 'binary', function (err, file)
 					{
 						if (err)
-						{        
+						{
 							response.writeHead(500, { 'Content-Type': 'text/html' });
 							response.end('<h1>500 Internal Server Error</h1>');
 							return;
