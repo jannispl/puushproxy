@@ -281,6 +281,20 @@ function handleRegister(req, res)
 	res.end();
 }
 
+function encode_base10(string)
+{
+	var number = "";
+	var length = string.length;
+	for (var i = 0; i < length; i++)
+		number += string.charCodeAt(i).toString(10);
+	return number;
+}
+
+function format_date(d)
+{
+	return d.toISOString().replace("T", " ").split(".")[0];
+}
+
 http.createServer(function (request, response)
 {
 	var method = request.method;
@@ -399,7 +413,45 @@ http.createServer(function (request, response)
 	}
 	else if (apiact == 'hist')
 	{
-		response.end('0\n');
+		var buf = '';
+		request.on('data', function (chunk)
+		{
+			buf += chunk.toString();
+		});
+		request.on('end', function ()
+		{
+			var query = querystring.parse(buf);
+			var apikey = query['k'];
+			if (!apikey)
+			{
+				response.end("0\n");
+				return;
+			}
+			var cond = { apiKey: String(query['k']) };
+			UserModel.findOne(cond, function(err, doc)
+			{
+				var user = doc["_id"];
+				FileModel.find({ owner: String(user) }).limit(9).sort('_id', -1).exec(function(err, result)
+				{
+					if (result == null || err)
+					{
+						response.end('0\n');
+						return;
+					}
+					var output = "0\n";
+					result.map( function(item)
+					{
+						out = encode_base10(item["shortname"]) + ",";
+						out += format_date(item["ts"]) + ",";
+						out += uploadedUrl + item["shortname"] + ",";
+						out += item["name"] + ",1337,0\n";
+						output += out;
+					});
+					response.end(output);
+					return;
+				});
+			});
+		});
 		return;
 	}
 }).listen(proxyPort);
