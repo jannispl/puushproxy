@@ -281,15 +281,6 @@ function handleRegister(req, res)
 	res.end();
 }
 
-function encode_base10(string)
-{
-	var number = "";
-	var length = string.length;
-	for (var i = 0; i < length; i++)
-		number += string.charCodeAt(i).toString(10);
-	return number;
-}
-
 function format_date(d)
 {
 	return d.toISOString().replace("T", " ").split(".")[0];
@@ -441,7 +432,7 @@ http.createServer(function (request, response)
 					var output = "0\n";
 					result.map( function(item)
 					{
-						out = encode_base10(item["shortname"]) + ",";
+						out = "5623457,";
 						out += format_date(item["ts"]) + ",";
 						out += uploadedUrl + item["shortname"] + ",";
 						out += item["name"] + ",1337,0\n";
