@@ -17,6 +17,7 @@ var mongoose = require('mongoose');
 var crypto = require('crypto');
 var path = require('path');
 var mime = require('mime');
+var marked = require('marked');
 
 mongoose.connect('mongodb://localhost/puush');
 
@@ -327,9 +328,17 @@ http.createServer(function (request, response)
 							headers['Content-Disposition'] = 'attachment; filename=' + doc.name
 						}
 
-						response.writeHead(200, headers);
-						response.write(file, 'binary');
-						response.end();
+						if (mimetype == "text/x-markdown" && doc.name.length >= ".md".length && doc.name.substr(doc.name.length - 3, doc.name.length) == ".md" && pathparts[0].indexOf(".raw") == -1)
+						{
+						        headers["Content-Type"] = "text/html";
+						        response.writeHead(200, headers);
+						        response.write(marked(file));
+						        response.end();
+						} else {
+							response.writeHead(200, headers);
+							response.write(file, 'binary');
+							response.end();
+						}
 					});
 				}
 			});
