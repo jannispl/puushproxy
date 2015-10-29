@@ -11,6 +11,11 @@ Requirements
  * formidable --- npm install formidable
  * mime --- npm install mime
  * mongoose --- npm install mongoose
+ * marked --- npm install marked
+
+Note about markdown
+---
+ As of a recent update, puushproxy now supports markdown. If you don't want automatic rendering of markdown to html, add .raw to the url or filename.
 
 Configuration
 ---
