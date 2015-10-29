@@ -6,6 +6,7 @@ Check http://puush.me for more information on puush.
 
 Requirements
 ---
+*** NOTE: This project was made either before npm provided package support, or before I heard about it. Someone with time, PLEASE make a PR and add a proper package.json file) ***
  * Node.js v0.4.12 or higher (+ npm) --- http://www.nodejs.org
  * MongoDB --- http://www.mongodb.org
  * formidable --- npm install formidable
